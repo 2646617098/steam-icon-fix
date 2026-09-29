@@ -31,6 +31,8 @@ constexpr int IDC_MINIMIZE = 1008;
 constexpr int IDC_CLOSE = 1009;
 constexpr int IDC_LOG_EDIT = 1010;
 constexpr int IDC_SPLITTER = 1011;
+constexpr int IDC_AUTO_REFRESH = 1012;
+constexpr int IDC_REFRESH_DESKTOP = 1013;
 constexpr int IDI_APP = 101;
 constexpr int kMaxCandidates = 30;
 
@@ -118,6 +120,7 @@ void SetShortcutIcon(const ShortcutInfo& shortcut, const std::wstring& exePath) 
             throw std::runtime_error("写入 .url 图标路径失败。");
         if (!WritePrivateProfileStringW(L"InternetShortcut", L"IconIndex", L"0", shortcut.path.c_str()))
             throw std::runtime_error("写入 .url 图标索引失败。");
+        SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATHW, shortcut.path.c_str(), nullptr);
         return;
     }
 
@@ -132,6 +135,7 @@ void SetShortcutIcon(const ShortcutInfo& shortcut, const std::wstring& exePath) 
     if (SUCCEEDED(hr)) hr = persist->Save(nullptr, TRUE);
     persist->Release();
     if (FAILED(hr)) throw std::runtime_error("快捷方式保存失败，请检查文件权限。");
+    SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATHW, shortcut.path.c_str(), nullptr);
 }
 
 std::optional<std::wstring> FindAppId(const std::wstring& text) {
@@ -306,10 +310,24 @@ std::wstring ErrorText(const std::exception& ex) {
     return result;
 }
 
+void RefreshDesktop() {
+    SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+    HWND shellView = nullptr;
+    EnumWindows([](HWND hwnd, LPARAM param) -> BOOL {
+        HWND view = FindWindowExW(hwnd, nullptr, L"SHELLDLL_DefView", nullptr);
+        if (view) {
+            *reinterpret_cast<HWND*>(param) = view;
+            return FALSE;
+        }
+        return TRUE;
+    }, reinterpret_cast<LPARAM>(&shellView));
+    if (shellView) SendMessageW(shellView, WM_COMMAND, 0x7103, 0);
+}
+
 class App {
 public:
     HWND window = nullptr;
-    HWND status = nullptr, hint = nullptr, candidatesList = nullptr, repairButton = nullptr, logEdit = nullptr, splitter = nullptr;
+    HWND status = nullptr, hint = nullptr, candidatesList = nullptr, repairButton = nullptr, logEdit = nullptr, splitter = nullptr, autoRefresh = nullptr, refreshDesktop = nullptr;
     HIMAGELIST imageList = nullptr;
     std::vector<IconCandidate> icons;
     std::optional<ShortcutInfo> shortcut;
@@ -353,6 +371,8 @@ public:
         MoveWindow(GetDlgItem(window, IDC_LOG), 24, splitY + 12, w - 48, 22, TRUE);
         MoveWindow(logEdit, 24, splitY + 36, w - 48, h - splitY - 86, TRUE);
         MoveWindow(repairButton, 24, h - 49, 180, 38, TRUE);
+        MoveWindow(autoRefresh, 220, h - 42, 190, 26, TRUE);
+        MoveWindow(refreshDesktop, 430, h - 49, 140, 38, TRUE);
     }
 
     void AddCandidate(const std::wstring& path, const std::wstring& label) {
@@ -422,8 +442,12 @@ public:
         if (!shortcut || selected < 0 || static_cast<size_t>(selected) >= icons.size()) return;
         try {
             SetShortcutIcon(*shortcut, icons[selected].path);
+            if (Button_GetCheck(autoRefresh) == BST_CHECKED) {
+                RefreshDesktop();
+                Log(L"已按设置自动刷新桌面");
+            }
             SetStatus(L"修复完成。必要时刷新桌面图标。");
-            Log(L"图标已写回快捷方式：" + icons[selected].path);
+            Log(L"图标已写回快捷方式（候选 " + std::to_wstring(selected + 1) + L"）：" + icons[selected].path);
         } catch (const std::exception& ex) {
             const auto message = ErrorText(ex);
             SetStatus(L"修复失败：" + message);
@@ -512,6 +536,8 @@ public:
             SetWindowLongPtrW(self->splitter, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&App::SplitterProc));
             self->repairButton = make(L"BUTTON", L"修复所选图标", BS_DEFPUSHBUTTON | WS_TABSTOP, IDC_REPAIR);
             EnableWindow(self->repairButton, FALSE);
+            self->autoRefresh = make(L"BUTTON", L"修复后自动刷新", BS_AUTOCHECKBOX | WS_TABSTOP, IDC_AUTO_REFRESH);
+            self->refreshDesktop = make(L"BUTTON", L"刷新桌面", BS_PUSHBUTTON | WS_TABSTOP, IDC_REFRESH_DESKTOP);
             make(L"BUTTON", L"帮助", BS_PUSHBUTTON, ID_HELP);
             make(L"STATIC", L"操作日志", SS_LEFT, IDC_LOG);
             self->logEdit = make(L"EDIT", L"", ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_BORDER, IDC_LOG_EDIT);
@@ -525,6 +551,11 @@ public:
         case WM_COMMAND:
             switch (LOWORD(wp)) {
             case IDC_REPAIR: self->Repair(); return 0;
+            case IDC_REFRESH_DESKTOP:
+                RefreshDesktop();
+                self->SetStatus(L"桌面刷新请求已发送。");
+                self->Log(L"手动刷新桌面");
+                return 0;
             case ID_HELP:
                 MessageBoxW(hwnd, L"使用方法：\n1. 将 Steam .url 或 .lnk 快捷方式拖入窗口。\n2. 在列表中选择图标。\n3. 点击“修复所选图标”。\n\n程序只修改快捷方式图标，不会修改游戏文件。\n日志：%TEMP%\\SteamIconFix.log", L"SteamIconFix 使用帮助", MB_OK | MB_ICONINFORMATION);
                 return 0;

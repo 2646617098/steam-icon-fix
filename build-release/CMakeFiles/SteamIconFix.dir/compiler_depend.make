@@ -291,7 +291,6 @@ CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft 
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\stdint.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstring"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\compare"
-CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\concepts"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\climits"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstdlib"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\ucrt\math.h"
@@ -715,8 +714,6 @@ E:\software\Code\VibeCoding\steam-icon-fix\src\main.cpp:
 "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\um\ocidl.h":
 
 "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\rpcnsip.h":
-
-"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\concepts":
 
 "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\shared\rpcsal.h":
 
