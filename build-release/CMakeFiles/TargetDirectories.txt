@@ -1,0 +1,3 @@
+E:/software/Code/VibeCoding/steam-icon-fix/build-release/CMakeFiles/SteamIconFix.dir
+E:/software/Code/VibeCoding/steam-icon-fix/build-release/CMakeFiles/edit_cache.dir
+E:/software/Code/VibeCoding/steam-icon-fix/build-release/CMakeFiles/rebuild_cache.dir
