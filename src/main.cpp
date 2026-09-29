@@ -16,6 +16,7 @@
 #include <string_view>
 #include <stdexcept>
 #include <vector>
+#include <cstdlib>
 
 namespace fs = std::filesystem;
 
@@ -33,6 +34,7 @@ constexpr int IDC_LOG_EDIT = 1010;
 constexpr int IDC_SPLITTER = 1011;
 constexpr int IDC_AUTO_REFRESH = 1012;
 constexpr int IDC_REFRESH_DESKTOP = 1013;
+constexpr int IDC_RESTART_EXPLORER = 1014;
 constexpr int IDI_APP = 101;
 constexpr int kMaxCandidates = 30;
 
@@ -311,7 +313,7 @@ std::wstring ErrorText(const std::exception& ex) {
 }
 
 void RefreshDesktop() {
-    SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+    SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST | SHCNF_FLUSH, nullptr, nullptr);
     HWND shellView = nullptr;
     EnumWindows([](HWND hwnd, LPARAM param) -> BOOL {
         HWND view = FindWindowExW(hwnd, nullptr, L"SHELLDLL_DefView", nullptr);
@@ -324,10 +326,50 @@ void RefreshDesktop() {
     if (shellView) SendMessageW(shellView, WM_COMMAND, 0x7103, 0);
 }
 
+bool ClearIconCache() {
+    wchar_t systemDirectory[MAX_PATH]{};
+    if (!GetSystemDirectoryW(systemDirectory, MAX_PATH)) return false;
+    const std::wstring executable = std::wstring(systemDirectory) + L"\\ie4uinit.exe";
+    if (GetFileAttributesW(executable.c_str()) == INVALID_FILE_ATTRIBUTES) return false;
+
+    std::wstring commandLine = L"\"" + executable + L"\" -ClearIconCache";
+    std::vector<wchar_t> commandBuffer(commandLine.begin(), commandLine.end());
+    commandBuffer.push_back(L'\0');
+    STARTUPINFOW startup{sizeof(startup)};
+    PROCESS_INFORMATION process{};
+    const BOOL created = CreateProcessW(executable.c_str(), commandBuffer.data(), nullptr, nullptr, FALSE,
+        CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process);
+    if (!created) return false;
+    WaitForSingleObject(process.hProcess, 5000);
+    CloseHandle(process.hThread);
+    CloseHandle(process.hProcess);
+    SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST | SHCNF_FLUSH, nullptr, nullptr);
+    return true;
+}
+
+bool RestartExplorer() {
+    wchar_t systemDirectory[MAX_PATH]{};
+    if (!GetSystemDirectoryW(systemDirectory, MAX_PATH)) return false;
+    const std::wstring taskkill = std::wstring(systemDirectory) + L"\\taskkill.exe";
+    std::wstring commandLine = L"\"" + taskkill + L"\" /f /im explorer.exe";
+    std::vector<wchar_t> commandBuffer(commandLine.begin(), commandLine.end());
+    commandBuffer.push_back(L'\0');
+    STARTUPINFOW startup{sizeof(startup)};
+    PROCESS_INFORMATION process{};
+    if (!CreateProcessW(taskkill.c_str(), commandBuffer.data(), nullptr, nullptr, FALSE,
+        CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process)) return false;
+    WaitForSingleObject(process.hProcess, 5000);
+    CloseHandle(process.hThread);
+    CloseHandle(process.hProcess);
+    Sleep(500);
+    HINSTANCE result = ShellExecuteW(nullptr, L"open", L"explorer.exe", nullptr, nullptr, SW_SHOWNORMAL);
+    return reinterpret_cast<INT_PTR>(result) > 32;
+}
+
 class App {
 public:
     HWND window = nullptr;
-    HWND status = nullptr, hint = nullptr, candidatesList = nullptr, repairButton = nullptr, logEdit = nullptr, splitter = nullptr, autoRefresh = nullptr, refreshDesktop = nullptr;
+    HWND status = nullptr, hint = nullptr, candidatesList = nullptr, repairButton = nullptr, logEdit = nullptr, splitter = nullptr, autoRefresh = nullptr, refreshDesktop = nullptr, restartExplorer = nullptr;
     HIMAGELIST imageList = nullptr;
     std::vector<IconCandidate> icons;
     std::optional<ShortcutInfo> shortcut;
@@ -372,7 +414,8 @@ public:
         MoveWindow(logEdit, 24, splitY + 36, w - 48, h - splitY - 86, TRUE);
         MoveWindow(repairButton, 24, h - 49, 180, 38, TRUE);
         MoveWindow(autoRefresh, 220, h - 42, 190, 26, TRUE);
-        MoveWindow(refreshDesktop, 430, h - 49, 140, 38, TRUE);
+        MoveWindow(refreshDesktop, w - 310, h - 49, 140, 38, TRUE);
+        MoveWindow(restartExplorer, w - 160, h - 49, 140, 38, TRUE);
     }
 
     void AddCandidate(const std::wstring& path, const std::wstring& label) {
@@ -537,7 +580,8 @@ public:
             self->repairButton = make(L"BUTTON", L"修复所选图标", BS_DEFPUSHBUTTON | WS_TABSTOP, IDC_REPAIR);
             EnableWindow(self->repairButton, FALSE);
             self->autoRefresh = make(L"BUTTON", L"修复后自动刷新", BS_AUTOCHECKBOX | WS_TABSTOP, IDC_AUTO_REFRESH);
-            self->refreshDesktop = make(L"BUTTON", L"刷新桌面", BS_PUSHBUTTON | WS_TABSTOP, IDC_REFRESH_DESKTOP);
+            self->refreshDesktop = make(L"BUTTON", L"强制刷新图标", BS_PUSHBUTTON | WS_TABSTOP, IDC_REFRESH_DESKTOP);
+            self->restartExplorer = make(L"BUTTON", L"重启资源管理器", BS_PUSHBUTTON | WS_TABSTOP, IDC_RESTART_EXPLORER);
             make(L"BUTTON", L"帮助", BS_PUSHBUTTON, ID_HELP);
             make(L"STATIC", L"操作日志", SS_LEFT, IDC_LOG);
             self->logEdit = make(L"EDIT", L"", ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_BORDER, IDC_LOG_EDIT);
@@ -552,9 +596,26 @@ public:
             switch (LOWORD(wp)) {
             case IDC_REPAIR: self->Repair(); return 0;
             case IDC_REFRESH_DESKTOP:
-                RefreshDesktop();
-                self->SetStatus(L"桌面刷新请求已发送。");
-                self->Log(L"手动刷新桌面");
+                if (ClearIconCache()) {
+                    RefreshDesktop();
+                    self->SetStatus(L"图标缓存已清理，桌面已刷新。");
+                    self->Log(L"已清理 Windows 图标缓存并刷新桌面");
+                } else {
+                    RefreshDesktop();
+                    self->SetStatus(L"已刷新桌面，但清理图标缓存失败。");
+                    self->Log(L"图标缓存清理失败，已发送普通桌面刷新请求");
+                }
+                return 0;
+            case IDC_RESTART_EXPLORER:
+                self->SetStatus(L"正在重启资源管理器，桌面和任务栏会短暂消失。");
+                self->Log(L"开始重启 Windows 资源管理器");
+                if (RestartExplorer()) {
+                    self->SetStatus(L"资源管理器已重启。");
+                    self->Log(L"资源管理器重启完成");
+                } else {
+                    self->SetStatus(L"资源管理器重启失败。");
+                    self->Log(L"资源管理器重启失败");
+                }
                 return 0;
             case ID_HELP:
                 MessageBoxW(hwnd, L"使用方法：\n1. 将 Steam .url 或 .lnk 快捷方式拖入窗口。\n2. 在列表中选择图标。\n3. 点击“修复所选图标”。\n\n程序只修改快捷方式图标，不会修改游戏文件。\n日志：%TEMP%\\SteamIconFix.log", L"SteamIconFix 使用帮助", MB_OK | MB_ICONINFORMATION);
@@ -569,7 +630,7 @@ public:
             break;
         case WM_GETMINMAXINFO: {
             auto info = reinterpret_cast<MINMAXINFO*>(lp);
-            info->ptMinTrackSize.x = 560; info->ptMinTrackSize.y = 420;
+            info->ptMinTrackSize.x = 700; info->ptMinTrackSize.y = 420;
             return 0;
         }
         case WM_DESTROY: PostQuitMessage(0); return 0;
