@@ -106,6 +106,7 @@ CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Ki
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\winnls.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\datetimeapi.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\stringapiset.h"
+CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\winnls.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\wincon.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\wincontypes.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\consoleapi.h"
@@ -357,6 +358,7 @@ CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft 
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xpolymorphic_allocator.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xcall_once.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xerrc.h"
+CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xatomic_wait.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xthreads.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\__msvc_threads_core.hpp"
@@ -513,6 +515,8 @@ E:\software\Code\VibeCoding\steam-icon-fix\src\main.cpp:
 "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\shared\specstrings.h":
 
 "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\utilapiset.h":
+
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic":
 
 "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\shared\specstrings_strict.h":
 

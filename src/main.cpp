@@ -32,7 +32,6 @@ constexpr int IDC_MINIMIZE = 1008;
 constexpr int IDC_CLOSE = 1009;
 constexpr int IDC_LOG_EDIT = 1010;
 constexpr int IDC_SPLITTER = 1011;
-constexpr int IDC_AUTO_REFRESH = 1012;
 constexpr int IDC_REFRESH_DESKTOP = 1013;
 constexpr int IDC_RESTART_EXPLORER = 1014;
 constexpr int IDI_APP = 101;
@@ -369,7 +368,7 @@ bool RestartExplorer() {
 class App {
 public:
     HWND window = nullptr;
-    HWND status = nullptr, hint = nullptr, candidatesList = nullptr, repairButton = nullptr, logEdit = nullptr, splitter = nullptr, autoRefresh = nullptr, refreshDesktop = nullptr, restartExplorer = nullptr;
+    HWND status = nullptr, hint = nullptr, candidatesList = nullptr, repairButton = nullptr, logEdit = nullptr, splitter = nullptr, refreshDesktop = nullptr, restartExplorer = nullptr;
     HIMAGELIST imageList = nullptr;
     std::vector<IconCandidate> icons;
     std::optional<ShortcutInfo> shortcut;
@@ -413,7 +412,6 @@ public:
         MoveWindow(GetDlgItem(window, IDC_LOG), 24, splitY + 12, w - 48, 22, TRUE);
         MoveWindow(logEdit, 24, splitY + 36, w - 48, h - splitY - 86, TRUE);
         MoveWindow(repairButton, 24, h - 49, 180, 38, TRUE);
-        MoveWindow(autoRefresh, 220, h - 42, 190, 26, TRUE);
         MoveWindow(refreshDesktop, w - 310, h - 49, 140, 38, TRUE);
         MoveWindow(restartExplorer, w - 160, h - 49, 140, 38, TRUE);
     }
@@ -485,12 +483,9 @@ public:
         if (!shortcut || selected < 0 || static_cast<size_t>(selected) >= icons.size()) return;
         try {
             SetShortcutIcon(*shortcut, icons[selected].path);
-            if (Button_GetCheck(autoRefresh) == BST_CHECKED) {
-                RefreshDesktop();
-                Log(L"已按设置自动刷新桌面");
-            }
-            SetStatus(L"修复完成。必要时刷新桌面图标。");
+            SetStatus(L"修复完成。由于 Windows 图标缓存，显示可能延迟；点击右下角“重启资源管理器”可一次性呈现之前所有修复结果。");
             Log(L"图标已写回快捷方式（候选 " + std::to_wstring(selected + 1) + L"）：" + icons[selected].path);
+            Log(L"提示：图标缓存可能导致显示延迟；点击右下角“重启资源管理器”可一次性呈现之前所有修复结果");
         } catch (const std::exception& ex) {
             const auto message = ErrorText(ex);
             SetStatus(L"修复失败：" + message);
@@ -579,7 +574,6 @@ public:
             SetWindowLongPtrW(self->splitter, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&App::SplitterProc));
             self->repairButton = make(L"BUTTON", L"修复所选图标", BS_DEFPUSHBUTTON | WS_TABSTOP, IDC_REPAIR);
             EnableWindow(self->repairButton, FALSE);
-            self->autoRefresh = make(L"BUTTON", L"修复后自动刷新", BS_AUTOCHECKBOX | WS_TABSTOP, IDC_AUTO_REFRESH);
             self->refreshDesktop = make(L"BUTTON", L"强制刷新图标", BS_PUSHBUTTON | WS_TABSTOP, IDC_REFRESH_DESKTOP);
             self->restartExplorer = make(L"BUTTON", L"重启资源管理器", BS_PUSHBUTTON | WS_TABSTOP, IDC_RESTART_EXPLORER);
             make(L"BUTTON", L"帮助", BS_PUSHBUTTON, ID_HELP);
@@ -618,7 +612,7 @@ public:
                 }
                 return 0;
             case ID_HELP:
-                MessageBoxW(hwnd, L"使用方法：\n1. 将 Steam .url 或 .lnk 快捷方式拖入窗口。\n2. 在列表中选择图标。\n3. 点击“修复所选图标”。\n\n程序只修改快捷方式图标，不会修改游戏文件。\n日志：%TEMP%\\SteamIconFix.log", L"SteamIconFix 使用帮助", MB_OK | MB_ICONINFORMATION);
+                MessageBoxW(hwnd, L"使用方法：\n1. 将 Steam .url 或 .lnk 快捷方式拖入窗口。\n2. 在列表中选择图标。\n3. 点击“修复所选图标”。\n\n由于 Windows 图标缓存，修复后图标可能会延迟显示。若要一次性呈现之前所有修复结果，请点击窗口最右下角的“重启资源管理器”按钮。\n\n程序只修改快捷方式图标，不会修改游戏文件。\n日志：%TEMP%\\SteamIconFix.log", L"SteamIconFix 使用帮助", MB_OK | MB_ICONINFORMATION);
                 return 0;
             }
             break;
