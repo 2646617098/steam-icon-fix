@@ -97,7 +97,6 @@ C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//shared/pshpack4.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//shared/poppack.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/winuser.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//shared/pshpack2.h
-C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//shared/poppack.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//shared/tvout.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/winnls.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/datetimeapi.h

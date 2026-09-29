@@ -30,6 +30,7 @@ constexpr int IDC_TITLE = 1007;
 constexpr int IDC_MINIMIZE = 1008;
 constexpr int IDC_CLOSE = 1009;
 constexpr int IDC_LOG_EDIT = 1010;
+constexpr int IDC_SPLITTER = 1011;
 constexpr int IDI_APP = 101;
 constexpr int kMaxCandidates = 30;
 
@@ -308,12 +309,14 @@ std::wstring ErrorText(const std::exception& ex) {
 class App {
 public:
     HWND window = nullptr;
-    HWND status = nullptr, hint = nullptr, candidatesList = nullptr, repairButton = nullptr, logEdit = nullptr;
+    HWND status = nullptr, hint = nullptr, candidatesList = nullptr, repairButton = nullptr, logEdit = nullptr, splitter = nullptr;
     HIMAGELIST imageList = nullptr;
     std::vector<IconCandidate> icons;
     std::optional<ShortcutInfo> shortcut;
     HFONT font = nullptr;
     int width = 760, height = 570;
+    int splitY = 0;
+    bool draggingSplitter = false;
 
     ~App() { if (imageList) ImageList_Destroy(imageList); if (font) DeleteObject(font); }
 
@@ -339,13 +342,17 @@ public:
         GetClientRect(window, &rc);
         const int w = rc.right, h = rc.bottom;
         width = w;
+        height = h;
+        if (splitY == 0) splitY = h - 190;
+        splitY = std::clamp(splitY, 150, std::max(151, h - 115));
         MoveWindow(GetDlgItem(window, ID_HELP), w - 104, 14, 80, 30, TRUE);
         MoveWindow(hint, 24, 18, w - 140, 28, TRUE);
         MoveWindow(status, 24, 54, w - 48, 42, TRUE);
-        MoveWindow(candidatesList, 24, 103, w - 48, h - 267, TRUE);
-        MoveWindow(repairButton, 24, h - 153, 180, 38, TRUE);
-        MoveWindow(GetDlgItem(window, IDC_LOG), 24, h - 104, w - 48, 22, TRUE);
-        MoveWindow(logEdit, 24, h - 80, w - 48, 64, TRUE);
+        MoveWindow(candidatesList, 24, 103, w - 48, splitY - 103, TRUE);
+        MoveWindow(splitter, 24, splitY, w - 48, 6, TRUE);
+        MoveWindow(GetDlgItem(window, IDC_LOG), 24, splitY + 12, w - 48, 22, TRUE);
+        MoveWindow(logEdit, 24, splitY + 36, w - 48, h - splitY - 86, TRUE);
+        MoveWindow(repairButton, 24, h - 49, 180, 38, TRUE);
     }
 
     void AddCandidate(const std::wstring& path, const std::wstring& label) {
@@ -388,7 +395,14 @@ public:
         AddCandidate(shortcut->target, L"快捷方式目标");
         if (gameDir && fs::is_directory(*gameDir)) {
             std::error_code ec;
-            for (fs::directory_iterator it(*gameDir, ec), end; !ec && it != end && icons.size() < kMaxCandidates; it.increment(ec)) {
+            constexpr int kMaxScanDepth = 3;
+            fs::directory_options options = fs::directory_options::skip_permission_denied;
+            for (fs::recursive_directory_iterator it(*gameDir, options, ec), end;
+                 !ec && it != end && icons.size() < kMaxCandidates; it.increment(ec)) {
+                if (it.depth() >= kMaxScanDepth && it->is_directory(ec)) {
+                    it.disable_recursion_pending();
+                    continue;
+                }
                 if (it->is_regular_file(ec) && EndsWithI(it->path().extension().wstring(), L".exe"))
                     AddCandidate(it->path().wstring(), it->path().filename().wstring());
             }
@@ -415,6 +429,37 @@ public:
             SetStatus(L"修复失败：" + message);
             Log(L"修复异常：" + message);
         }
+    }
+
+    static LRESULT CALLBACK SplitterProc(HWND hwnd, UINT message, WPARAM wp, LPARAM lp) {
+        auto* self = reinterpret_cast<App*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+        if (!self) return DefWindowProcW(hwnd, message, wp, lp);
+        switch (message) {
+        case WM_SETCURSOR:
+            SetCursor(LoadCursorW(nullptr, IDC_SIZENS));
+            return TRUE;
+        case WM_LBUTTONDOWN:
+            self->draggingSplitter = true;
+            SetCapture(hwnd);
+            return 0;
+        case WM_MOUSEMOVE:
+            if (self->draggingSplitter) {
+                POINT point{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+                ClientToScreen(hwnd, &point);
+                ScreenToClient(self->window, &point);
+                self->splitY = point.y;
+                self->Layout();
+            }
+            return 0;
+        case WM_LBUTTONUP:
+            self->draggingSplitter = false;
+            ReleaseCapture();
+            return 0;
+        case WM_CAPTURECHANGED:
+            self->draggingSplitter = false;
+            return 0;
+        }
+        return DefWindowProcW(hwnd, message, wp, lp);
     }
 
     void Drop(HDROP drop) {
@@ -461,6 +506,10 @@ public:
             ListView_InsertColumn(self->candidatesList, 0, &column);
             self->imageList = ImageList_Create(32, 32, ILC_COLOR32 | ILC_MASK, 8, 8);
             ListView_SetImageList(self->candidatesList, self->imageList, LVSIL_SMALL);
+            self->splitter = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_NOTIFY,
+                0, 0, 0, 0, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_SPLITTER)), GetModuleHandleW(nullptr), nullptr);
+            SetWindowLongPtrW(self->splitter, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
+            SetWindowLongPtrW(self->splitter, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&App::SplitterProc));
             self->repairButton = make(L"BUTTON", L"修复所选图标", BS_DEFPUSHBUTTON | WS_TABSTOP, IDC_REPAIR);
             EnableWindow(self->repairButton, FALSE);
             make(L"BUTTON", L"帮助", BS_PUSHBUTTON, ID_HELP);
