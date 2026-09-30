@@ -417,19 +417,27 @@ public:
         const int w = rc.right, h = rc.bottom;
         width = w;
         height = h;
-        const int margin = Scale(28), buttonH = Scale(40);
+        const int margin = Scale(28), groupGap = Scale(12), buttonH = Scale(40);
         if (splitY == 0) splitY = h - Scale(220);
         splitY = std::clamp(splitY, Scale(180), std::max(Scale(181), h - Scale(130)));
+        const int bottomY = h - margin - buttonH;
         MoveWindow(GetDlgItem(window, ID_HELP), w - margin - Scale(92), Scale(18), Scale(92), Scale(34), TRUE);
         MoveWindow(hint, margin, Scale(20), w - margin * 2 - Scale(112), Scale(34), TRUE);
         MoveWindow(status, margin, Scale(62), w - margin * 2, Scale(48), TRUE);
         MoveWindow(candidatesList, margin, Scale(122), w - margin * 2, splitY - Scale(122), TRUE);
         MoveWindow(splitter, margin, splitY, w - margin * 2, Scale(7), TRUE);
         MoveWindow(GetDlgItem(window, IDC_LOG), margin, splitY + Scale(16), w - margin * 2, Scale(24), TRUE);
-        MoveWindow(logEdit, margin, splitY + Scale(46), w - margin * 2, h - splitY - Scale(102), TRUE);
-        MoveWindow(repairButton, margin, h - Scale(54), Scale(190), buttonH, TRUE);
-        MoveWindow(refreshDesktop, w - margin - Scale(310), h - Scale(54), Scale(145), buttonH, TRUE);
-        MoveWindow(restartExplorer, w - margin - Scale(155), h - Scale(54), Scale(155), buttonH, TRUE);
+        const int logTop = splitY + Scale(46);
+        const int logBottomGap = Scale(16);
+        MoveWindow(logEdit, margin, logTop, w - margin * 2,
+            std::max(Scale(70), bottomY - logBottomGap - logTop), TRUE);
+        const int repairW = Scale(190), refreshW = Scale(120), restartW = Scale(155);
+        const int restartX = w - margin - restartW;
+        const int refreshX = restartX - groupGap - refreshW;
+        MoveWindow(repairButton, margin, bottomY, repairW, buttonH, TRUE);
+        MoveWindow(refreshDesktop, refreshX, bottomY, refreshW, buttonH, TRUE);
+        MoveWindow(restartExplorer, restartX, bottomY, restartW, buttonH, TRUE);
+        ListView_SetColumnWidth(candidatesList, 0, std::max(Scale(300), w - margin * 2 - Scale(18)));
     }
 
     void AddCandidate(const std::wstring& path, const std::wstring& label) {
@@ -596,10 +604,10 @@ public:
                 0, 0, 0, 0, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_SPLITTER)), GetModuleHandleW(nullptr), nullptr);
             SetWindowLongPtrW(self->splitter, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
             SetWindowLongPtrW(self->splitter, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&App::SplitterProc));
-            self->repairButton = make(L"BUTTON", L"修复所选图标", BS_DEFPUSHBUTTON | WS_TABSTOP, IDC_REPAIR);
+            self->repairButton = make(L"BUTTON", L"修复所选图标", BS_DEFPUSHBUTTON | BS_CENTER | WS_TABSTOP, IDC_REPAIR);
             EnableWindow(self->repairButton, FALSE);
-            self->refreshDesktop = make(L"BUTTON", L"强制刷新图标", BS_PUSHBUTTON | WS_TABSTOP, IDC_REFRESH_DESKTOP);
-            self->restartExplorer = make(L"BUTTON", L"重启资源管理器", BS_PUSHBUTTON | WS_TABSTOP, IDC_RESTART_EXPLORER);
+            self->refreshDesktop = make(L"BUTTON", L"刷新桌面", BS_PUSHBUTTON | BS_CENTER | WS_TABSTOP, IDC_REFRESH_DESKTOP);
+            self->restartExplorer = make(L"BUTTON", L"重启资源管理器", BS_PUSHBUTTON | BS_CENTER | WS_TABSTOP, IDC_RESTART_EXPLORER);
             make(L"BUTTON", L"帮助", BS_PUSHBUTTON, ID_HELP);
             make(L"STATIC", L"操作日志", SS_LEFT, IDC_LOG);
             self->logEdit = make(L"EDIT", L"", ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_BORDER, IDC_LOG_EDIT);

@@ -175,6 +175,7 @@ CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Ki
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\shared\pshpack8.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\shared\poppack.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\shared\poppack.h"
+CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\prsht.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\shared\pshpack8.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\shared\poppack.h"
 CMakeFiles\SteamIconFix.dir\src\main.cpp.obj: "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\commctrl.h"
@@ -776,9 +777,9 @@ E:\software\Code\VibeCoding\steam-icon-fix\src\main.cpp:
 
 "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\oleauto.h":
 
-"C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\commctrl.h":
-
 "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\prsht.h":
+
+"C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\commctrl.h":
 
 "C:\Program Files (x86)\Windows Kits\10\\include\10.0.26100.0\\um\shtypes.h":
 
