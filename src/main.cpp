@@ -655,12 +655,12 @@ public:
             case IDC_REFRESH_DESKTOP:
                 if (ClearIconCache()) {
                     RefreshDesktop();
-                    self->SetStatus(L"图标缓存已清理，桌面已刷新。");
-                    self->Log(L"已清理 Windows 图标缓存并刷新桌面");
+                    self->SetStatus(L"已发送图标缓存刷新请求，并刷新桌面。缓存效果可能因 Windows Explorer 状态而延迟生效。");
+                    self->Log(L"已发送 Windows 图标缓存清理请求，并发送桌面刷新通知");
                 } else {
                     RefreshDesktop();
-                    self->SetStatus(L"已刷新桌面，但清理图标缓存失败。");
-                    self->Log(L"图标缓存清理失败，已发送普通桌面刷新请求");
+                    self->SetStatus(L"已刷新桌面，但图标缓存清理请求未能启动。");
+                    self->Log(L"图标缓存清理请求未能启动，已发送普通桌面刷新通知");
                 }
                 return 0;
             case IDC_RESTART_EXPLORER:
