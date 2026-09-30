@@ -5,6 +5,7 @@
 #include <commctrl.h>
 #include <shlwapi.h>
 #include <windowsx.h>
+#include <uxtheme.h>
 #include <algorithm>
 #include <cstring>
 #include <cwctype>
@@ -373,11 +374,25 @@ public:
     std::vector<IconCandidate> icons;
     std::optional<ShortcutInfo> shortcut;
     HFONT font = nullptr;
+    HFONT titleFont = nullptr;
+    HBRUSH backgroundBrush = nullptr;
+    HBRUSH panelBrush = nullptr;
+    HBRUSH editBrush = nullptr;
+    UINT dpi = 96;
     int width = 760, height = 570;
     int splitY = 0;
     bool draggingSplitter = false;
 
-    ~App() { if (imageList) ImageList_Destroy(imageList); if (font) DeleteObject(font); }
+    ~App() {
+        if (imageList) ImageList_Destroy(imageList);
+        if (font) DeleteObject(font);
+        if (titleFont) DeleteObject(titleFont);
+        if (backgroundBrush) DeleteObject(backgroundBrush);
+        if (panelBrush) DeleteObject(panelBrush);
+        if (editBrush) DeleteObject(editBrush);
+    }
+
+    int Scale(int value) const { return MulDiv(value, static_cast<int>(dpi), 96); }
 
     void Log(const std::wstring& message) {
         SYSTEMTIME time{};
@@ -402,18 +417,19 @@ public:
         const int w = rc.right, h = rc.bottom;
         width = w;
         height = h;
-        if (splitY == 0) splitY = h - 190;
-        splitY = std::clamp(splitY, 150, std::max(151, h - 115));
-        MoveWindow(GetDlgItem(window, ID_HELP), w - 104, 14, 80, 30, TRUE);
-        MoveWindow(hint, 24, 18, w - 140, 28, TRUE);
-        MoveWindow(status, 24, 54, w - 48, 42, TRUE);
-        MoveWindow(candidatesList, 24, 103, w - 48, splitY - 103, TRUE);
-        MoveWindow(splitter, 24, splitY, w - 48, 6, TRUE);
-        MoveWindow(GetDlgItem(window, IDC_LOG), 24, splitY + 12, w - 48, 22, TRUE);
-        MoveWindow(logEdit, 24, splitY + 36, w - 48, h - splitY - 86, TRUE);
-        MoveWindow(repairButton, 24, h - 49, 180, 38, TRUE);
-        MoveWindow(refreshDesktop, w - 310, h - 49, 140, 38, TRUE);
-        MoveWindow(restartExplorer, w - 160, h - 49, 140, 38, TRUE);
+        const int margin = Scale(28), buttonH = Scale(40);
+        if (splitY == 0) splitY = h - Scale(220);
+        splitY = std::clamp(splitY, Scale(180), std::max(Scale(181), h - Scale(130)));
+        MoveWindow(GetDlgItem(window, ID_HELP), w - margin - Scale(92), Scale(18), Scale(92), Scale(34), TRUE);
+        MoveWindow(hint, margin, Scale(20), w - margin * 2 - Scale(112), Scale(34), TRUE);
+        MoveWindow(status, margin, Scale(62), w - margin * 2, Scale(48), TRUE);
+        MoveWindow(candidatesList, margin, Scale(122), w - margin * 2, splitY - Scale(122), TRUE);
+        MoveWindow(splitter, margin, splitY, w - margin * 2, Scale(7), TRUE);
+        MoveWindow(GetDlgItem(window, IDC_LOG), margin, splitY + Scale(16), w - margin * 2, Scale(24), TRUE);
+        MoveWindow(logEdit, margin, splitY + Scale(46), w - margin * 2, h - splitY - Scale(102), TRUE);
+        MoveWindow(repairButton, margin, h - Scale(54), Scale(190), buttonH, TRUE);
+        MoveWindow(refreshDesktop, w - margin - Scale(310), h - Scale(54), Scale(145), buttonH, TRUE);
+        MoveWindow(restartExplorer, w - margin - Scale(155), h - Scale(54), Scale(155), buttonH, TRUE);
     }
 
     void AddCandidate(const std::wstring& path, const std::wstring& label) {
@@ -554,19 +570,27 @@ public:
         if (!self) return DefWindowProcW(hwnd, message, wp, lp);
         switch (message) {
         case WM_CREATE: {
-            self->font = CreateFontW(-16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+            self->dpi = GetDpiForWindow(hwnd);
+            self->font = CreateFontW(-self->Scale(16), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+            self->titleFont = CreateFontW(-self->Scale(21), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+            self->backgroundBrush = CreateSolidBrush(RGB(245, 247, 250));
+            self->panelBrush = CreateSolidBrush(RGB(255, 255, 255));
+            self->editBrush = CreateSolidBrush(RGB(250, 251, 253));
             auto make = [&](const wchar_t* cls, const wchar_t* text, DWORD style, int id) {
                 HWND h = CreateWindowW(cls, text, WS_CHILD | WS_VISIBLE | style, 0, 0, 0, 0, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
                 SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(self->font), TRUE);
+                if (wcscmp(cls, L"BUTTON") == 0 || wcscmp(cls, WC_LISTVIEWW) == 0 || wcscmp(cls, L"EDIT") == 0)
+                    SetWindowTheme(h, L"Explorer", nullptr);
                 return h;
             };
             self->hint = make(L"STATIC", L"将桌面上的 Steam 快捷方式拖到这里", SS_LEFT, IDC_HINT);
+            SendMessageW(self->hint, WM_SETFONT, reinterpret_cast<WPARAM>(self->titleFont), TRUE);
             self->status = make(L"STATIC", L"支持 .lnk 和 .url", SS_LEFT, IDC_STATUS);
             self->candidatesList = make(WC_LISTVIEWW, L"", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, IDC_CANDIDATES);
             ListView_SetExtendedListViewStyle(self->candidatesList, LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
             LVCOLUMNW column{}; column.mask = LVCF_TEXT | LVCF_WIDTH; column.pszText = const_cast<wchar_t*>(L"可用图标"); column.cx = 650;
             ListView_InsertColumn(self->candidatesList, 0, &column);
-            self->imageList = ImageList_Create(32, 32, ILC_COLOR32 | ILC_MASK, 8, 8);
+            self->imageList = ImageList_Create(self->Scale(32), self->Scale(32), ILC_COLOR32 | ILC_MASK, 8, 8);
             ListView_SetImageList(self->candidatesList, self->imageList, LVSIL_SMALL);
             self->splitter = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_NOTIFY,
                 0, 0, 0, 0, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_SPLITTER)), GetModuleHandleW(nullptr), nullptr);
@@ -585,6 +609,37 @@ public:
             return 0;
         }
         case WM_SIZE: self->Layout(); return 0;
+        case WM_DPICHANGED: {
+            self->dpi = HIWORD(wp);
+            const auto suggested = reinterpret_cast<RECT*>(lp);
+            SetWindowPos(hwnd, nullptr, suggested->left, suggested->top,
+                suggested->right - suggested->left, suggested->bottom - suggested->top,
+                SWP_NOZORDER | SWP_NOACTIVATE);
+            return 0;
+        }
+        case WM_ERASEBKGND: {
+            RECT rc{};
+            GetClientRect(hwnd, &rc);
+            FillRect(reinterpret_cast<HDC>(wp), &rc, self->backgroundBrush);
+            return 1;
+        }
+        case WM_CTLCOLORSTATIC: {
+            auto dc = reinterpret_cast<HDC>(wp);
+            auto control = reinterpret_cast<HWND>(lp);
+            SetBkMode(dc, TRANSPARENT);
+            if (control == self->status) {
+                SetTextColor(dc, RGB(38, 76, 115));
+                return reinterpret_cast<INT_PTR>(self->panelBrush);
+            }
+            SetTextColor(dc, RGB(44, 50, 66));
+            return reinterpret_cast<INT_PTR>(self->backgroundBrush);
+        }
+        case WM_CTLCOLOREDIT: {
+            auto dc = reinterpret_cast<HDC>(wp);
+            SetTextColor(dc, RGB(35, 42, 52));
+            SetBkColor(dc, RGB(250, 251, 253));
+            return reinterpret_cast<INT_PTR>(self->editBrush);
+        }
         case WM_DROPFILES: self->Drop(reinterpret_cast<HDROP>(wp)); return 0;
         case WM_COMMAND:
             switch (LOWORD(wp)) {
@@ -624,7 +679,7 @@ public:
             break;
         case WM_GETMINMAXINFO: {
             auto info = reinterpret_cast<MINMAXINFO*>(lp);
-            info->ptMinTrackSize.x = 700; info->ptMinTrackSize.y = 420;
+            info->ptMinTrackSize.x = self->Scale(760); info->ptMinTrackSize.y = self->Scale(500);
             return 0;
         }
         case WM_DESTROY: PostQuitMessage(0); return 0;
@@ -636,6 +691,7 @@ public:
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_LISTVIEW_CLASSES};
     InitCommonControlsEx(&controls);
@@ -651,7 +707,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     wc.lpszClassName = L"SteamIconFixWindow";
     if (!RegisterClassExW(&wc)) { CoUninitialize(); return 1; }
     HWND hwnd = CreateWindowExW(0, wc.lpszClassName, L"SteamIconFix", WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 780, 620, nullptr, nullptr, instance, &app);
+        CW_USEDEFAULT, CW_USEDEFAULT, 920, 720, nullptr, nullptr, instance, &app);
     if (!hwnd) { DeleteObject(wc.hbrBackground); CoUninitialize(); return 1; }
     ShowWindow(hwnd, show);
     UpdateWindow(hwnd);
