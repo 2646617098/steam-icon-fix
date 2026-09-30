@@ -312,6 +312,53 @@ std::wstring ErrorText(const std::exception& ex) {
     return result;
 }
 
+fs::path WindowConfigPath() {
+    wchar_t localAppData[MAX_PATH]{};
+    DWORD length = GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH);
+    if (!length || length >= MAX_PATH) return {};
+    std::error_code ec;
+    fs::path folder = fs::path(localAppData) / L"SteamIconFix";
+    fs::create_directories(folder, ec);
+    return folder / L"window.ini";
+}
+
+bool IsRectVisibleOnScreen(const RECT& rect) {
+    HMONITOR monitor = MonitorFromRect(&rect, MONITOR_DEFAULTTONULL);
+    if (!monitor) return false;
+    MONITORINFO info{sizeof(info)};
+    if (!GetMonitorInfoW(monitor, &info)) return false;
+    RECT intersection{};
+    return IntersectRect(&intersection, &rect, &info.rcWork) &&
+        (intersection.right - intersection.left >= 80) &&
+        (intersection.bottom - intersection.top >= 80);
+}
+
+std::optional<RECT> LoadSavedWindowRect() {
+    const auto config = WindowConfigPath();
+    if (config.empty()) return std::nullopt;
+    const std::wstring file = config.wstring();
+    const int left = GetPrivateProfileIntW(L"Window", L"Left", INT_MIN, file.c_str());
+    const int top = GetPrivateProfileIntW(L"Window", L"Top", INT_MIN, file.c_str());
+    const int width = GetPrivateProfileIntW(L"Window", L"Width", 0, file.c_str());
+    const int height = GetPrivateProfileIntW(L"Window", L"Height", 0, file.c_str());
+    if (left == INT_MIN || top == INT_MIN || width < 500 || height < 350) return std::nullopt;
+    RECT rect{left, top, left + width, top + height};
+    if (!IsRectVisibleOnScreen(rect)) return std::nullopt;
+    return rect;
+}
+
+void SaveWindowRect(HWND hwnd) {
+    RECT rect{};
+    if (!GetWindowRect(hwnd, &rect)) return;
+    const auto config = WindowConfigPath();
+    if (config.empty()) return;
+    const std::wstring file = config.wstring();
+    WritePrivateProfileStringW(L"Window", L"Left", std::to_wstring(rect.left).c_str(), file.c_str());
+    WritePrivateProfileStringW(L"Window", L"Top", std::to_wstring(rect.top).c_str(), file.c_str());
+    WritePrivateProfileStringW(L"Window", L"Width", std::to_wstring(rect.right - rect.left).c_str(), file.c_str());
+    WritePrivateProfileStringW(L"Window", L"Height", std::to_wstring(rect.bottom - rect.top).c_str(), file.c_str());
+}
+
 void RefreshDesktop() {
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST | SHCNF_FLUSH, nullptr, nullptr);
     HWND shellView = nullptr;
@@ -616,7 +663,12 @@ public:
             self->Log(L"程序启动");
             return 0;
         }
-        case WM_SIZE: self->Layout(); return 0;
+        case WM_SIZE:
+            self->Layout();
+            return 0;
+        case WM_EXITSIZEMOVE:
+            SaveWindowRect(hwnd);
+            return 0;
         case WM_DPICHANGED: {
             self->dpi = HIWORD(wp);
             const auto suggested = reinterpret_cast<RECT*>(lp);
@@ -690,7 +742,14 @@ public:
             info->ptMinTrackSize.x = self->Scale(760); info->ptMinTrackSize.y = self->Scale(500);
             return 0;
         }
-        case WM_DESTROY: PostQuitMessage(0); return 0;
+        case WM_CLOSE:
+            SaveWindowRect(hwnd);
+            DestroyWindow(hwnd);
+            return 0;
+        case WM_DESTROY:
+            SaveWindowRect(hwnd);
+            PostQuitMessage(0);
+            return 0;
         }
         return DefWindowProcW(hwnd, message, wp, lp);
     }
@@ -714,8 +773,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     wc.hbrBackground = CreateSolidBrush(RGB(248, 249, 250));
     wc.lpszClassName = L"SteamIconFixWindow";
     if (!RegisterClassExW(&wc)) { CoUninitialize(); return 1; }
+    const auto savedRect = LoadSavedWindowRect();
+    const int x = savedRect ? savedRect->left : CW_USEDEFAULT;
+    const int y = savedRect ? savedRect->top : CW_USEDEFAULT;
+    const int width = savedRect ? savedRect->right - savedRect->left : 920;
+    const int height = savedRect ? savedRect->bottom - savedRect->top : 720;
     HWND hwnd = CreateWindowExW(0, wc.lpszClassName, L"SteamIconFix", WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 920, 720, nullptr, nullptr, instance, &app);
+        x, y, width, height, nullptr, nullptr, instance, &app);
     if (!hwnd) { DeleteObject(wc.hbrBackground); CoUninitialize(); return 1; }
     ShowWindow(hwnd, show);
     UpdateWindow(hwnd);

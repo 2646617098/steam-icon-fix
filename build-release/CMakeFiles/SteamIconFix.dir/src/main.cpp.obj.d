@@ -121,6 +121,7 @@ C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/imm.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/ime_cmodes.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/shellapi.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/shlobj.h
+C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/ole2.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//shared/pshpack8.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//um/objbase.h
 C:/Program Files (x86)/Windows Kits/10//include/10.0.26100.0//shared/rpc.h
@@ -278,6 +279,7 @@ C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.
 C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include/yvals.h
 C:/Program Files (x86)/Windows Kits/10/include/10.0.26100.0/ucrt/crtdbg.h
 C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include/vcruntime_new_debug.h
+C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include/vcruntime_new.h
 C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include/crtdefs.h
 C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include/use_ansi.h
 C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include/__msvc_iter_core.hpp
